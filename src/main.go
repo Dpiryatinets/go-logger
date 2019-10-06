@@ -5,10 +5,14 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
+
+const dateFormat = "2006-01-02T15:04:05"
 
 var stdOut io.Writer = os.Stdout
 var stdError io.Writer = os.Stderr
+var now = time.Now
 
 var levels = map[string]int{
 	"error": 0,
@@ -47,7 +51,8 @@ func (logger *Logger) logMessage(level string, message interface{}) {
 	if strings.ToLower(level) == "error" {
 		out = stdError
 	}
-	_, _ = fmt.Fprintf(out, "%v - %v", level, message)
+	now := now().Format(dateFormat)
+	_, _ = fmt.Fprintf(out, "%v - %v - %v", now, level, message)
 }
 
 var loggerInstance *Logger
