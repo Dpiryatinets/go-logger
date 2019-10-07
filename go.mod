@@ -1,3 +1,3 @@
-module go-logger
+module github.com/Dpiryatinets/go-logger
 
 go 1.12
