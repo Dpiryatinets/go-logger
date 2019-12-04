@@ -6,68 +6,48 @@ import (
 	"time"
 )
 
-func TestDebugOutput(t *testing.T) {
+const fakePid = 112
+const fakeServiceName = "fake_api"
+
+func TestLogFormat(t *testing.T) {
 	// TODO: move mocks to separate function/package
 	out := stdOut
 	stdOut = &bytes.Buffer{}
 	actualNow := now
 	now = fakeNow
-	defer func() { stdOut = out;  now = actualNow }()
+	actualGetPid := getPid
+	getPid = getFakePid
+	defer func() { stdOut = out; now = actualNow; getPid = actualGetPid }()
 
-	logger := GetLogger("debug")
+	logger := &Logger{LoggingOptions{
+		LogLevel:    debug,
+		ServiceName: fakeServiceName,
+	}}
 	logger.Debug([]int{1, 2, 3})
 
-	testExpectation := "2019-10-04T17:24:12 - DEBUG - [1 2 3]"
+	testExpectation := "{\"message\":[1,2,3],\"type\":\"debug\",\"processId\":112,\"date\":" +
+		"\"2019-10-04T17:24:12Z\",\"serviceName\":\"fake_api\"}\n"
 	testResult := stdOut.(*bytes.Buffer).String()
 	if testResult != testExpectation {
-		t.Fatal("DEBUG log incorrect value", testResult)
+		t.Fatal("log format is wrong", testResult, testExpectation)
 	}
 }
 
-func TestDebugLevel(t *testing.T) {
+func TestLogLevel(t *testing.T) {
 	out := stdOut
 	stdOut = &bytes.Buffer{}
 	defer func() { stdOut = out }()
 
 	testExpectation := ""
-	logger := GetLogger("error")
+	logger := &Logger{LoggingOptions{
+		LogLevel:    errorLevel,
+		ServiceName: fakeServiceName,
+	}}
 	logger.Debug([]int{1, 2, 3})
 
 	testResult := stdOut.(*bytes.Buffer).String()
 	if testResult != testExpectation {
-		t.Fatal("DEBUG log incorrect value", testResult)
-	}
-}
-
-func TestInfoOutput(t *testing.T) {
-	out := stdOut
-	stdOut = &bytes.Buffer{}
-	actualNow := now
-	now = fakeNow
-	defer func() { stdOut = out; now = actualNow }()
-
-	logger := GetLogger("info")
-	logger.Info([]int{1, 2, 3})
-
-	testExpectation := "2019-10-04T17:24:12 - INFO - [1 2 3]"
-	testResult := stdOut.(*bytes.Buffer).String()
-	if testResult != testExpectation {
-		t.Fatal("INFO log incorrect value", testResult)
-	}
-}
-
-func TestInfoLevel(t *testing.T) {
-	out := stdOut
-	stdOut = &bytes.Buffer{}
-	defer func() { stdOut = out }()
-
-	testExpectation := ""
-	logger := GetLogger("error")
-	logger.Info([]int{1, 2, 3})
-
-	testResult := stdOut.(*bytes.Buffer).String()
-	if testResult != testExpectation {
-		t.Fatal("INFO log incorrect value", testResult)
+		t.Fatal("output is not empty", testResult, testExpectation)
 	}
 }
 
@@ -78,28 +58,39 @@ func TestErrorOutput(t *testing.T) {
 	stdError = &bytes.Buffer{}
 	actualNow := now
 	now = fakeNow
+	actualGetPid := getPid
+	getPid = getFakePid
 	defer func() {
 		stdOut = out
 		stdError = err
 		now = actualNow
+		getPid = actualGetPid
 	}()
 
-	logger := GetLogger("info")
+	logger := GetLogger(LoggingOptions{
+		LogLevel:    info,
+		ServiceName: fakeServiceName,
+	})
 	logger.Error([]int{1, 2, 3})
 
-	stdResult := stdOut.(*bytes.Buffer).String()
-	if stdResult != "" {
-		t.Fatal("ERROR log incorrect process out")
+	testResult := stdOut.(*bytes.Buffer).String()
+	testExpectation := ""
+	if testResult != testExpectation {
+		t.Fatal("wrong process out", testResult, testExpectation)
 	}
 
-	testExpectation := "2019-10-04T17:24:12 - ERROR - [1 2 3]"
-	errResult := stdError.(*bytes.Buffer).String()
-	if errResult != testExpectation {
-		t.Fatal("ERROR log incorrect value", errResult)
+	testExpectation = "{\"message\":[1,2,3],\"type\":\"error\",\"processId\":112," +
+		"\"date\":\"2019-10-04T17:24:12Z\",\"serviceName\":\"fake_api\"}\n"
+	testResult = stdError.(*bytes.Buffer).String()
+	if testResult != testExpectation {
+		t.Fatal("wrong message using right out", testResult, testExpectation)
 	}
 }
 
-
 func fakeNow() time.Time {
 	return time.Date(2019, 10, 04, 17, 24, 12, 0, time.UTC)
+}
+
+func getFakePid() int {
+	return fakePid
 }
